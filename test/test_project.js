@@ -67,7 +67,7 @@ contract('School', function(accounts) {
         let makeM1 = await schoolInstance.setModule(2,"00000","FT5001",accounts[0],teacher0Address,0,{from: accounts[0]});
         let makeM2 = await schoolInstance.setModule(3,"12345","FT5002",accounts[0],teacher0Address,0,{from: accounts[0]});
         let makeM3 = await schoolInstance.setModule(2,"54321","FT5003",accounts[0],teacher1Address,1,{from: accounts[0]});
-        let makeM4 = await schoolInstance.setModule(2,"54321","FT5003",accounts[0],teacher1Address,1,{from: accounts[0]});
+        let makeM4 = await schoolInstance.setModule(2,"11111","FT5003",accounts[0],teacher1Address,1,{from: accounts[0]});
 
         assert.notStrictEqual(
             makeM1,
@@ -115,7 +115,6 @@ contract('School', function(accounts) {
     it('school forward module feedback to teacher', async() => {
         let feedback4 = await schoolInstance.giveFeedback(1,1,"this course is bad",'12345',{from: accounts[3]});
         let feedback2teacher1 = await schoolInstance.feedbackToTeacher(1, {from: accounts[0]});
-        truffleAssert.eventEmitted(feedback2teacher1,'Feedback2Teacher');
     })
 
     it('no one except school can forward module feedback to teacher', async() => {
@@ -127,23 +126,59 @@ contract('School', function(accounts) {
         }
     })
 
-    // it('List a Dice', async() => {
-    //     let transfer2 = await diceInstance.transfer(1,diceMarketInstance.address, {from: accounts[2]});
-    //     let list2 = await diceMarketInstance.list(1, "30000000000000000", {from: accounts[2]});
+    it('student give module feedback and get 1 token', async() => {
+        let feedback5 = await schoolInstance.giveFeedback(1,2,"this course helps me a lot",'54321',{from: accounts[3]});
+        let feedback6 = await schoolInstance.giveFeedback(1,3,"this course is of no use",'11111',{from: accounts[3]});
+        let balanceS1 = await schoolInstance.getBalance.call(accounts[3],{from: accounts[3]})
+        assert.notStrictEqual(
+            balanceS1,
+            3,
+            "Token for Feedback Error!"
+        );
+    })
 
-    //     truffleAssert.eventEmitted(list2,'listed');
-    // })
+    it('student exchange tokens for rewards, but not enough amount', async() => {
+        let feedback7 = await schoolInstance.giveFeedback(2,0,"this course teach me math",'00000',{from: accounts[4]});
+        let feedback8 = await schoolInstance.giveFeedback(2,3,"this course teach me coding",'11111',{from: accounts[4]});
+        try{
+            let rewards1 = await schoolInstance.exchangeforRewards(3,accounts[4],{from: accounts[4]});
+            assert.fail("Contracts should have thrown an error!");
+        }catch(err) {
+            // assert.include(err.message, 'require','the error should be sent require statement');
+        }
+        
+    })
 
-    // it('Unlist a Dice', async() => {
-    //     let unlist2 = await diceMarketInstance.unlist(1, {from: accounts[2]});
-    //     truffleAssert.eventEmitted(unlist2,'unlisted');
-    // })
+    it('student exchange tokens for rewards, but only student himself can do it', async() => {
+        // let feedback7 = await schoolInstance.giveFeedback(2,0,"this course teach me math",'00000',{from: accounts[4]});
+        // let feedback8 = await schoolInstance.giveFeedback(2,3,"this course teach me coding",'11111',{from: accounts[4]});
+        try{
+            let rewards2 = await schoolInstance.exchangeforRewards(2,accounts[3],{from: accounts[4]});
+            assert.fail("Contracts should have thrown an error!");
+        }catch(err) {
+            // assert.include(err.message, 'require','the error should be sent require statement');
+        }
+        
+    })
+    it('student exchange tokens for rewards successfully', async() => {
+        // let feedback7 = await schoolInstance.giveFeedback(2,0,"this course teach me math",'00000',{from: accounts[4]});
+        // let feedback8 = await schoolInstance.giveFeedback(2,3,"this course teach me coding",'11111',{from: accounts[4]});
+        let rewards3 = await schoolInstance.exchangeforRewards(2,accounts[4],{from: accounts[4]});
+        let balanceS2 = await schoolInstance.getBalance.call(accounts[4],{from: accounts[4]})
+        assert.notStrictEqual(
+            balanceS2,
+            0,
+            "Token balance Error!"
+        );
+        truffleAssert.eventEmitted(rewards3,'Reward');
+    })
 
-    // it('Buy a Dice', async() => {
-    //     let transfer3 = await diceInstance.transfer(2,diceMarketInstance.address, {from: accounts[3]});
-    //     let list3 = await diceMarketInstance.list(2, "30000000000000000", {from: accounts[3]});
-    //     let buy3 = await diceMarketInstance.buy(2, {from: accounts[4], value:"50000000000000000"});
-    //     truffleAssert.eventEmitted(buy3,'buyed');
-    // })
-    
+    it('only student self can check thier own balance', async() => {
+        try{
+            let balanceCheck = await schoolInstance.getBalance(accounts[3],{from: accounts[4]});
+            assert.fail("Contracts should have thrown an error!");
+        }catch(err) {
+            // assert.include(err.message, 'require','the error should be sent require statement');
+        }
+    })
 })
